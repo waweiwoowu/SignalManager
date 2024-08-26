@@ -14,18 +14,36 @@ namespace SignalManager.ProcessingTools.FourierTransforms
         public RFFTCalculator(double[] timeDomainSignal, int sampleRate)
             : base(timeDomainSignal, sampleRate) { }// Call the base class constructor
 
-        public override double[] ComputeFrequencyBins(int sampleRate, int numberOfSamples)
+        public override double[] ComputeFrequencyBins()
         {
-            double frequencyResolution = sampleRate / (2 * (numberOfSamples - 1));
-            double[] frequencyBins = new double[numberOfSamples];
+            double frequencyResolution = _sampleRate / (2 * (_numberOfSamples - 1));
+            double[] frequencyBins = new double[_numberOfSamples];
 
             // Calculate the frequency bins
-            for (int i = 0; i < numberOfSamples; i++)
+            for (int i = 0; i < _numberOfSamples; i++)
             {
                 frequencyBins[i] = i * frequencyResolution;
             }
 
             return frequencyBins;
+        }
+
+        public override double[] GetFrequencyBinsWithInterval(double frequencyBinInterval)
+        {
+            double frequencyResolution = _sampleRate / (2.0 * (_numberOfSamples - 1));
+            int binWidth = (int)(frequencyBinInterval / frequencyResolution);
+
+            // Calculate the number of new bins
+            int newSize = (_numberOfSamples / 2) / binWidth + 1;
+            double[] newFrequencyBins = new double[newSize];
+
+            // Populate the new frequency bins
+            for (int i = 0; i < newSize; i++)
+            {
+                newFrequencyBins[i] = i * frequencyBinInterval;
+            }
+
+            return newFrequencyBins;
         }
 
         public override Complex[] ComputeFrequencyDomainSignal(double[] timeDomainSignal)
@@ -101,6 +119,36 @@ namespace SignalManager.ProcessingTools.FourierTransforms
             double[] cleanedTimeDomainSignal = cleanedSignal.Take(numberOfSamples).ToArray();
 
             return (cleanedTimeDomainSignal, cleanedFrequencyDomainSignal);
+        }
+
+        // Add the ComputeMagnitudeInFrequencyBinInterval method here
+        public override (double[], double[]) ComputeMagnitudeInFrequencyBinInterval(double[] magnitude, int sampleRate, int numberOfSamples, double frequencyBinInterval)
+        {
+            double frequencyResolution = (double)sampleRate / numberOfSamples;
+            int binWidth = (int)(frequencyBinInterval / frequencyResolution);
+
+            // Create a new array to store the combined frequencies and their corresponding bins
+            int newSize = numberOfSamples / (2 * binWidth) + 1;  // Adjusted for RFFT
+            double[] combinedMagnitude = new double[newSize];
+            double[] newFrequencyBins = new double[newSize];
+
+            // Combine frequencies within the target range
+            for (int i = 0; i < numberOfSamples / 2 + 1; i += binWidth)
+            {
+                double combinedValue = 0;
+                int binCount = 0;
+
+                for (int j = i; j < i + binWidth && j < numberOfSamples / 2 + 1; j++)
+                {
+                    combinedValue += magnitude[j];
+                    binCount++;
+                }
+
+                combinedMagnitude[i / binWidth] = combinedValue / binCount; // Averaging
+                newFrequencyBins[i / binWidth] = i * frequencyResolution;
+            }
+
+            return (newFrequencyBins, combinedMagnitude);
         }
     }
 }

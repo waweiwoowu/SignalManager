@@ -18,10 +18,10 @@ namespace SignalManager.ProcessingTools.FourierTransforms
             return timeDomainSignal.Select((_, index) => (double)index / sampleRate).ToArray();
         }
 
-        public virtual double[] ComputeFrequencyBins(int sampleRate, int numberOfSamples)
+        public virtual double[] ComputeFrequencyBins()
         {
-            double frequencyResolution = (double)sampleRate / numberOfSamples;
-            double[] frequencyBins = new double[numberOfSamples / 2 + 1];
+            double frequencyResolution = (double)_sampleRate / _numberOfSamples;
+            double[] frequencyBins = new double[_numberOfSamples / 2 + 1];
 
             // Calculate the frequency bins
             for (int i = 0; i < frequencyBins.Length; i++)
@@ -31,6 +31,25 @@ namespace SignalManager.ProcessingTools.FourierTransforms
 
             return frequencyBins;
         }
+
+        public virtual double[] GetFrequencyBinsWithInterval(double frequencyBinInterval)
+        {
+            double frequencyResolution = (double)_sampleRate / _numberOfSamples;
+            int binWidth = (int)(frequencyBinInterval / frequencyResolution);
+
+            // Calculate the number of new bins
+            int newSize = _numberOfSamples / binWidth + 1;
+            double[] newFrequencyBins = new double[newSize];
+
+            // Populate the new frequency bins
+            for (int i = 0; i < newSize; i++)
+            {
+                newFrequencyBins[i] = i * frequencyBinInterval;
+            }
+
+            return newFrequencyBins;
+        }
+
 
         public double[] ComputeAmplitude(double[] timeDomainSignal)
         {

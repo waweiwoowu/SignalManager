@@ -56,33 +56,6 @@ namespace SignalManager.ProcessingTools.FourierTransforms
             return magnitudeDb;
         }
 
-        public double[] ComputeMagnitudeInFrequencyBinInterval(double[] magnitude, int sampleRate, int numberOfSamples, double frequencyBinInterval)
-        {
-            double frequencyResolution = (double)sampleRate / numberOfSamples;
-            int binWidth = (int)(frequencyBinInterval / frequencyResolution);
-
-            // Create a new array to store the combined frequencies
-            int newSize = numberOfSamples / binWidth + 1;
-            double[] combinedMagnitude = new double[newSize];
-
-            // Combine frequencies within the target range
-            for (int i = 0; i < numberOfSamples; i += binWidth)
-            {
-                double combinedValue = 0;
-                int binCount = 0;
-
-                for (int j = i; j < i + binWidth && j < numberOfSamples; j++)
-                {
-                    combinedValue += magnitude[j];
-                    binCount++;
-                }
-
-                combinedMagnitude[i / binWidth] = combinedValue / binCount; // Averaging
-            }
-
-            return combinedMagnitude;
-        }
-
         public virtual (double[], Complex[]) ReduceNoise(double[] noiseSignal, double frequencyBinInterval = 0, double threshold = 1e-10)
         {
             // Resize noise signal to match the length of the input signal
@@ -143,5 +116,59 @@ namespace SignalManager.ProcessingTools.FourierTransforms
 
             return (cleanedTimeDomainSignal, cleanedFrequencyDomainSignal);
         }
+
+        public virtual (double[] newFrequencyBins, double[] combinedMagnitude) ComputeMagnitudeInFrequencyBinInterval(double[] magnitude, int sampleRate, int numberOfSamples, double frequencyBinInterval)
+        {
+            double frequencyResolution = (double)sampleRate / numberOfSamples;
+            int binWidth = (int)(frequencyBinInterval / frequencyResolution);
+
+            // Calculate the size of the new arrays
+            int newSize = numberOfSamples / binWidth + 1;
+            double[] combinedMagnitude = new double[newSize];
+            double[] newFrequencyBins = new double[newSize];
+
+            // Combine frequencies within the target range and calculate new frequency bins
+            for (int i = 0; i < numberOfSamples; i += binWidth)
+            {
+                double combinedValue = 0;
+                int binCount = 0;
+
+                for (int j = i; j < i + binWidth && j < numberOfSamples; j++)
+                {
+                    combinedValue += magnitude[j];
+                    binCount++;
+                }
+
+                combinedMagnitude[i / binWidth] = combinedValue / binCount; // Averaging
+                newFrequencyBins[i / binWidth] = i * frequencyResolution; // New frequency bin
+            }
+
+            return (newFrequencyBins, combinedMagnitude);
+        }
+
+        public (double[] frequencies, double[] magnitudes) FindCharacteristicFrequencies(double[] magnitude, double frequencyBinInterval, int number, double minFrequency = 0, double maxFrequency = double.MaxValue)
+        {
+            (double[] newFrequencyBins, double[] combinedMagnitudes) = ComputeMagnitudeInFrequencyBinInterval(magnitude, _sampleRate, _numberOfSamples, frequencyBinInterval);
+
+            // Filter frequencies within the specified range
+            var frequencyMagnitudePairs = new List<(double frequency, double magnitude)>();
+            for (int i = 0; i < newFrequencyBins.Length; i++)
+            {
+                if (newFrequencyBins[i] >= minFrequency && newFrequencyBins[i] <= maxFrequency)
+                {
+                    frequencyMagnitudePairs.Add((newFrequencyBins[i], combinedMagnitudes[i]));
+                }
+            }
+
+            // Sort the list by magnitude in descending order
+            var sortedPairs = frequencyMagnitudePairs.OrderByDescending(pair => pair.magnitude).Take(number).ToList();
+
+            // Extract the frequencies and magnitudes of the characteristic frequencies
+            double[] characteristicFrequencies = sortedPairs.Select(pair => pair.frequency).ToArray();
+            double[] characteristicMagnitudes = sortedPairs.Select(pair => pair.magnitude).ToArray();
+
+            return (characteristicFrequencies, characteristicMagnitudes);
+        }
+
     }
 }
