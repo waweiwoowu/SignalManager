@@ -15,6 +15,7 @@ namespace SignalManager.AudioTools.ProcessingManager
         public SignalProcessor(SignalData signalData)
         {
             OriginalSignalData = signalData;
+            OriginalSignalData.TimeDomainSignal = signalData.DecimalSignal;
             InitializeSignalProperties(NoiseSignalData);
             _totalWindows = (int)Math.Ceiling((double)OriginalSignalData.TimeDomainSignal.Length / OriginalSignalData.WindowSize);
         }

@@ -31,10 +31,10 @@ namespace SignalManager.AudioTools.AnalyzingManager
             }
 
             // Compute the magnitude spectrum for both the target and good samples
-            var (magnitude, frequencyBins) = SignalData.RFFT.ComputeMagnitudeInFrequencyBinInterval(
+            var (frequencyBins, magnitude) = SignalData.RFFT.ComputeMagnitudeInFrequencyBinInterval(
                 SignalData.Magnitude, SignalData.SampleRate, SignalData.TimeDomainSignal.Length, frequencyBinInterval);
 
-            var (goodSampleMagnitude, _) = goodSample.SignalData.RFFT.ComputeMagnitudeInFrequencyBinInterval(
+            var (_, goodSampleMagnitude) = goodSample.SignalData.RFFT.ComputeMagnitudeInFrequencyBinInterval(
                 goodSample.SignalData.Magnitude, goodSample.SignalData.SampleRate, goodSample.SignalData.TimeDomainSignal.Length, frequencyBinInterval);
 
             // Compare the two magnitude spectra
@@ -44,7 +44,7 @@ namespace SignalManager.AudioTools.AnalyzingManager
                 result[i] = Math.Abs(magnitude[i] - goodSampleMagnitude[i]);
             }
 
-            return (result, frequencyBins);
+            return (frequencyBins, result);
         }
 
         public List<(double frequency, double difference)> CompareCharacteristicFrequencies(SignalAnalyzer goodSampleAnalyzer, double frequencyBinInterval, int numberOfFrequencies)
