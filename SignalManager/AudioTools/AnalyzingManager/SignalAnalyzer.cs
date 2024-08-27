@@ -18,63 +18,59 @@ namespace SignalManager.AudioTools.AnalyzingManager
             SignalData.TimeDomainSignal = SignalData.DecimalSignal;
         }
 
-        public (double[], double[]) Compare(SignalAnalyzer goodSample, double frequencyBinInterval)
+        public (double[] combinedFrequencyBins, double[] comparedMagnitude) Compare(SignalData baselineSampleData, double frequencyBinInterval)
         {
-            if (this.SignalData.SampleRate != goodSample.SignalData.SampleRate)
+            if (this.SignalData.SampleRate != baselineSampleData.SampleRate)
             {
                 throw new Exception("Sample rates do not match.");
             }
 
-            if (this.SignalData.DecimalSignal.Length != goodSample.SignalData.DecimalSignal.Length)
+            if (this.SignalData.DecimalSignal.Length != baselineSampleData.DecimalSignal.Length)
             {
                 throw new Exception("Signal lengths do not match.");
             }
 
             // Compute the magnitude spectrum for both the target and good samples
-            var (frequencyBins, magnitude) = SignalData.RFFT.ComputeMagnitudeInFrequencyBinInterval(
+            var (combinedFrequencyBins, magnitude) = this.SignalData.RFFT.ComputeMagnitudeInFrequencyBinInterval(
                 SignalData.Magnitude, SignalData.SampleRate, SignalData.TimeDomainSignal.Length, frequencyBinInterval);
 
-            var (_, goodSampleMagnitude) = goodSample.SignalData.RFFT.ComputeMagnitudeInFrequencyBinInterval(
-                goodSample.SignalData.Magnitude, goodSample.SignalData.SampleRate, goodSample.SignalData.TimeDomainSignal.Length, frequencyBinInterval);
+            var (_, goodSampleMagnitude) = baselineSampleData.RFFT.ComputeMagnitudeInFrequencyBinInterval(
+                baselineSampleData.Magnitude, baselineSampleData.SampleRate, baselineSampleData.TimeDomainSignal.Length, frequencyBinInterval);
 
             // Compare the two magnitude spectra
-            double[] result = new double[magnitude.Length];
+            double[] comparedMagnitude = new double[magnitude.Length];
+            double difference = 0;
             for (int i = 0; i < magnitude.Length; i++)
             {
-                result[i] = Math.Abs(magnitude[i] - goodSampleMagnitude[i]);
+                difference = magnitude[i] - goodSampleMagnitude[i];
+                if (difference > 0)
+                    comparedMagnitude[i] = difference;
             }
 
-            return (frequencyBins, result);
+            return (combinedFrequencyBins, comparedMagnitude);
         }
 
-        public List<(double frequency, double difference)> CompareCharacteristicFrequencies(SignalAnalyzer goodSampleAnalyzer, double frequencyBinInterval, int numberOfFrequencies)
+        public List<(double comparedCharacteristicFrequencies, double comparedCharacteristicMagnitudes)> CompareCharacteristicFrequencies(SignalData baselineSampleData, double frequencyBinInterval, int peakFrequencyCount, double minFrequency = 0, double maxFrequency = double.MaxValue)
         {
-            // Find characteristic frequencies of the good sample
-            var (goodFrequencies, goodMagnitudes) = goodSampleAnalyzer.SignalData.RFFT.FindCharacteristicFrequencies(goodSampleAnalyzer.SignalData.Magnitude, frequencyBinInterval, numberOfFrequencies);
+            var (combinedFrequencyBins, comparedMagnitude) = Compare(baselineSampleData, frequencyBinInterval);
 
-            // List to store the (frequency, difference) pairs
-            List<(double frequency, double difference)> frequencyDifferences = new List<(double frequency, double difference)>();
-
-            // Calculate the magnitude of the target signal at these frequencies and store the differences
-            foreach (var goodFreq in goodFrequencies)
-            {
-                var frequencyBinsWithInterval = SignalData.RFFT.GetFrequencyBinsWithInterval(frequencyBinInterval);
-                int targetIndex = Array.IndexOf(frequencyBinsWithInterval, goodFreq);
-
-                if (targetIndex >= 0 && targetIndex < SignalData.Magnitude.Length)
-                {
-                    double targetMagnitude = SignalData.Magnitude[targetIndex];
-                    double goodMagnitude = goodMagnitudes[Array.IndexOf(goodFrequencies, goodFreq)];
-
-                    double difference = Math.Abs(targetMagnitude - goodMagnitude);
-
-                    // Add the frequency and difference pair to the list
-                    frequencyDifferences.Add((goodFreq, difference));
-                }
-            }
-
-            return frequencyDifferences;
+            return CompareCharacteristicFrequencies(combinedFrequencyBins, comparedMagnitude, peakFrequencyCount, minFrequency, maxFrequency);
         }
 
+        public List<(double comparedCharacteristicFrequencies, double comparedCharacteristicMagnitudes)> CompareCharacteristicFrequencies(double[] combinedFrequencyBins, double[] comparedMagnitude, int peakFrequencyCount, double minFrequency = 0, double maxFrequency = double.MaxValue)
+        {
+            // Find characteristic frequencies of the compared signal
+            var (comparedCharacteristicFrequencies, comparedCharacteristicMagnitudes) = this.SignalData.RFFT.FindCharacteristicFrequencies(combinedFrequencyBins, comparedMagnitude, peakFrequencyCount, minFrequency, maxFrequency);
+
+            // Create a list to store the result
+            var result = new List<(double, double)>();
+
+            for (int i = 0; i < comparedCharacteristicFrequencies.Length; i++)
+            {
+                result.Add((comparedCharacteristicFrequencies[i], comparedCharacteristicMagnitudes[i]));
+            }
+
+            return result;
+        }
     }
 }

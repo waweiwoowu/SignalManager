@@ -146,22 +146,30 @@ namespace SignalManager.ProcessingTools.FourierTransforms
             return (newFrequencyBins, combinedMagnitude);
         }
 
-        public (double[] frequencies, double[] magnitudes) FindCharacteristicFrequencies(double[] magnitude, double frequencyBinInterval, int number, double minFrequency = 0, double maxFrequency = double.MaxValue)
+        public (double[] frequencies, double[] magnitudes) FindCharacteristicFrequencies(double frequencyBinInterval, double[] magnitude, int peakFrequencyCount, double minFrequency = 0, double maxFrequency = double.MaxValue)
         {
-            (double[] newFrequencyBins, double[] combinedMagnitudes) = ComputeMagnitudeInFrequencyBinInterval(magnitude, _sampleRate, _numberOfSamples, frequencyBinInterval);
+            (double[] combinedFrequencyBins, double[] combinedMagnitudes) = ComputeMagnitudeInFrequencyBinInterval(magnitude, _sampleRate, _numberOfSamples, frequencyBinInterval);
 
+            var (characteristicFrequencies, characteristicMagnitudes) = FindCharacteristicFrequencies(combinedFrequencyBins, combinedMagnitudes, peakFrequencyCount, minFrequency, maxFrequency);
+
+            return (characteristicFrequencies, characteristicMagnitudes);
+        }
+
+        public (double[] frequencies, double[] magnitudes) FindCharacteristicFrequencies(double[] combinedFrequencyBins, double[] combinedMagnitudes, int peakFrequencyCount, double minFrequency = 0, double maxFrequency = double.MaxValue)
+        {
             // Filter frequencies within the specified range
             var frequencyMagnitudePairs = new List<(double frequency, double magnitude)>();
-            for (int i = 0; i < newFrequencyBins.Length; i++)
+            for (int i = 0; i < combinedFrequencyBins.Length; i++)
             {
-                if (newFrequencyBins[i] >= minFrequency && newFrequencyBins[i] <= maxFrequency)
+                var debug = combinedFrequencyBins[i];
+                if (combinedFrequencyBins[i] != 0 && combinedFrequencyBins[i] >= minFrequency && combinedFrequencyBins[i] <= maxFrequency)
                 {
-                    frequencyMagnitudePairs.Add((newFrequencyBins[i], combinedMagnitudes[i]));
+                    frequencyMagnitudePairs.Add((combinedFrequencyBins[i], combinedMagnitudes[i]));
                 }
             }
 
             // Sort the list by magnitude in descending order
-            var sortedPairs = frequencyMagnitudePairs.OrderByDescending(pair => pair.magnitude).Take(number).ToList();
+            var sortedPairs = frequencyMagnitudePairs.OrderByDescending(pair => pair.magnitude).Take(peakFrequencyCount).ToList();
 
             // Extract the frequencies and magnitudes of the characteristic frequencies
             double[] characteristicFrequencies = sortedPairs.Select(pair => pair.frequency).ToArray();
@@ -169,6 +177,5 @@ namespace SignalManager.ProcessingTools.FourierTransforms
 
             return (characteristicFrequencies, characteristicMagnitudes);
         }
-
     }
 }

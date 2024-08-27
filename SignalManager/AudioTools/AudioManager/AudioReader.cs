@@ -25,6 +25,7 @@ namespace SignalManager.AudioTools.AudioManager
                 reader.Read(Data.ByteSignal, 0, Data.ByteSignal.Length);
             }
             Data.DecimalSignal = ConvertToDecimalSignal(Data.ByteSignal, Data.SampleWidth, Data.Channels);
+            Data.TimeDomainSignal = Data.DecimalSignal;
         }
 
         private double[] ConvertToDecimalSignal(byte[] byteSignal, int sampleWidth, int channels)
