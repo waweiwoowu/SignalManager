@@ -32,10 +32,10 @@ namespace SignalManager.AudioTools.AnalyzingManager
 
             // Compute the magnitude spectrum for both the target and baseline samples
             var (frequencyBins, targetMagnitude) = this.Data.RFFT.ComputeMagnitudeInFrequencyBinInterval(
-                Data.Magnitude, Data.SampleRate, Data.TimeDomainSignal.Length, frequencyBinInterval);
+                Data.Magnitude, Data.SampleRate, Data.NumberOfSamples, frequencyBinInterval);
 
             var (_, baselineMagnitude) = baselineData.RFFT.ComputeMagnitudeInFrequencyBinInterval(
-                baselineData.Magnitude, baselineData.SampleRate, baselineData.TimeDomainSignal.Length, frequencyBinInterval);
+                baselineData.Magnitude, baselineData.SampleRate, baselineData.NumberOfSamples, frequencyBinInterval);
 
             // Calculate the difference in magnitude between the two spectra
             double[] magnitudeDifferences = new double[targetMagnitude.Length];

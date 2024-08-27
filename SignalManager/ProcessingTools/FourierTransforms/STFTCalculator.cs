@@ -109,7 +109,7 @@ namespace SignalManager.ProcessingTools.FourierTransforms
             return timeDomainSignalSpectrum;
         }
 
-        public (double[], Complex[][], double[][]) ReduceNoise(double[] noiseSignal, double frequencyBinInterval = 0, double threshold = 1e-10)
+        public (double[] cleanedTimeDomainSignalSpectrum, Complex[][] cleanedFrequencyDomainSignalSpectrum, double[][] cleanedMagnitudeSpectrum) ReduceNoise(double[] noiseSignal, double frequencyBinInterval = 0, double threshold = 1e-10)
         {
             // Resize noise signal to match the length of the original signal
             double[] resizedNoiseSignal = ResizeSignal(noiseSignal, _numberOfSamples);
@@ -164,7 +164,7 @@ namespace SignalManager.ProcessingTools.FourierTransforms
             return averageSpectrum;
         }
 
-        public (double[][], double[]) FilterMagnitudeSpectrum(double[][] magnitudeSpectrum, double[] frequencyBins, double frequencyMin = 0, double frequencyMax = 5000)
+        public (double[] filteredFrequencyBins, double[][] filteredMagnitudeSpectrum) FilterMagnitudeSpectrum(double[] frequencyBins, double[][] magnitudeSpectrum, double frequencyMin = 0, double frequencyMax = 5000)
         {
             // Find the indices of the frequency range
             int minIndex = Array.FindIndex(frequencyBins, f => f >= frequencyMin);
@@ -178,7 +178,7 @@ namespace SignalManager.ProcessingTools.FourierTransforms
                 filteredMagnitudeSpectrum[i] = magnitudeSpectrum[i].Skip(minIndex).Take(maxIndex - minIndex + 1).ToArray();
             }
             double[] filteredFrequencyBins = frequencyBins.Skip(minIndex).Take(maxIndex - minIndex + 1).ToArray();
-            return (filteredMagnitudeSpectrum, filteredFrequencyBins);
+            return (filteredFrequencyBins, filteredMagnitudeSpectrum);
         }
     }
 }

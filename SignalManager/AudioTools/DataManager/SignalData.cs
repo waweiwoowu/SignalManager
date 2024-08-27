@@ -14,6 +14,8 @@ namespace SignalManager.AudioTools.DataManager
         public FFTCalculator FFT { get; private set; }
         public FFTCalculator RFFT { get; private set; }
 
+        private int _windowSize = 4096;
+        private int _hopSize = 2048;
         private double[] _timeDomainSignal;
         private Complex[] _frequencyDomainSignal;
         private double[] _timeBins;
@@ -22,8 +24,10 @@ namespace SignalManager.AudioTools.DataManager
         private double[] _magnitude;
         private double[] _amplitudeDB;
         private double[] _magnitudeDB;
-        private int _windowSize = 4096;
-        private int _hopSize = 2048;
+        private Complex[][] _frequencySpectrum;
+        private double[][] _magnitudeSpectrum;
+        private double[] _averageMagnitudeSpectrum;
+        private double[] _averageMagnitudeDBSpectrum;
 
         public double[] TimeDomainSignal 
         { 
@@ -37,8 +41,8 @@ namespace SignalManager.AudioTools.DataManager
         public double[] FrequencyBins => _frequencyBins ?? (_frequencyBins = FFT.ComputeFrequencyBins());
         public double[] Amplitude => _amplitude ?? (_amplitude = STFT.ComputeAmplitude(TimeDomainSignal));
         public double[] Magnitude => _magnitude ?? (_magnitude = FFT.ComputeMagnitude(FrequencyDomainSignal));
-        public double[] AmplitudeDB => _amplitudeDB ?? (_amplitudeDB = STFT.MagnitudeToDb(Amplitude));
-        public double[] MagnitudeDB => _magnitudeDB ?? (_magnitudeDB = STFT.MagnitudeToDb(Magnitude));
+        public double[] AmplitudeDB => _amplitudeDB ?? (_amplitudeDB = STFT.ComputeMagnitudeInDb(Amplitude));
+        public double[] MagnitudeDB => _magnitudeDB ?? (_magnitudeDB = STFT.ComputeMagnitudeInDb(Magnitude));
 
         // STFT Data
         public int WindowSize { get { return _windowSize; } set { _windowSize = value; } }
@@ -46,10 +50,32 @@ namespace SignalManager.AudioTools.DataManager
         public int PulseWidth { get; set; }
         public int[] PulseSampleIndices { get; set; }
         public int[] NoiseDropSampleIndices { get; set; }
-        public Complex[][] FrequencyDomainSignalSpectrum { get; set; }
-        public double[][] MagnitudeSpectrum { get; set; }
-
-        //public double[][] MagnitudeDBSpectrum { get; set; }
+        public Complex[][] FrequencyDomainSignalSpectrum
+        {
+            get
+            {
+                _frequencySpectrum = STFT.ComputeFrequencyDomainSpectrum(TimeDomainSignal);
+                return _frequencySpectrum;
+            }
+            set
+            {
+                _frequencySpectrum = value;
+            }
+        }
+        public double[][] MagnitudeSpectrum
+        {
+            get
+            {
+                _magnitudeSpectrum = STFT.ComputeMagnitudeSpectrum(TimeDomainSignal);
+                return _magnitudeSpectrum;
+            }
+            set
+            {
+                _magnitudeSpectrum = value;
+            }
+        }
+        public double[] AverageMagnitudeSpectrum => _averageMagnitudeSpectrum ?? (_averageMagnitudeSpectrum = STFT.ComputeAverageMagnitude(MagnitudeSpectrum));
+        public double[] AverageMagnitudeDBSpectrum => _averageMagnitudeDBSpectrum ?? (_averageMagnitudeDBSpectrum = STFT.ComputeMagnitudeInDb(AverageMagnitudeSpectrum));
 
         private void Reset()
         {
@@ -58,6 +84,13 @@ namespace SignalManager.AudioTools.DataManager
             _frequencyBins = null;
             _amplitude = null;
             _magnitude = null;
+            _amplitudeDB = null;
+            _magnitudeDB = null;
+            _frequencySpectrum = null;
+            _magnitudeSpectrum = null;
+            _averageMagnitudeSpectrum = null;
+            _averageMagnitudeDBSpectrum = null;
+
             STFT = new STFTCalculator(TimeDomainSignal, SampleRate, WindowSize, HopSize);
             FFT = new FFTCalculator(TimeDomainSignal, SampleRate);
             RFFT = new RFFTCalculator(TimeDomainSignal, SampleRate);

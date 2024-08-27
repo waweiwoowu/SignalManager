@@ -41,11 +41,6 @@ namespace SignalManager.ProcessingTools.FourierTransforms
             return frequencyDomainSignal.Select(c => c.Real).ToArray();
         }
 
-        public double[] ComputeMagnitudeInDb(double[] magnitude)
-        {
-            return magnitude.Select(m => 20 * Math.Log10(m)).ToArray();
-        }
-
         public virtual (double[] cleanedTimeDomainSignal, Complex[] cleanedFrequencyDomainSignal) ReduceNoise(double[] noiseSignal, double frequencyBinInterval = 0, double threshold = 1e-10)
         {
             double[] resizedNoiseSignal = ResizeSignal(noiseSignal, _numberOfSamples);
@@ -67,53 +62,6 @@ namespace SignalManager.ProcessingTools.FourierTransforms
 
             double[] cleanedTimeDomainSignal = ComputeInverseFFT(cleanedFrequencyDomainSignal);
             return (cleanedTimeDomainSignal, cleanedFrequencyDomainSignal);
-        }
-
-        public virtual (double[] newFrequencyBins, double[] combinedMagnitude) ComputeMagnitudeInFrequencyBinInterval(double[] magnitude, int sampleRate, int numberOfSamples, double frequencyBinInterval)
-        {
-            double frequencyResolution = (double)sampleRate / numberOfSamples;
-            int binWidth = (int)(frequencyBinInterval / frequencyResolution);
-            int newSize = numberOfSamples / binWidth + 1;
-
-            double[] combinedMagnitude = new double[newSize];
-            double[] newFrequencyBins = new double[newSize];
-
-            // Combine frequencies and calculate new bins
-            for (int i = 0; i < numberOfSamples; i += binWidth)
-            {
-                double combinedValue = 0;
-                int binCount = 0;
-
-                for (int j = i; j < i + binWidth && j < numberOfSamples; j++)
-                {
-                    combinedValue += magnitude[j];
-                    binCount++;
-                }
-
-                combinedMagnitude[i / binWidth] = combinedValue / binCount;
-                newFrequencyBins[i / binWidth] = i * frequencyResolution;
-            }
-
-            return (newFrequencyBins, combinedMagnitude);
-        }
-
-        public (double[] frequencies, double[] magnitudes) FindCharacteristicFrequencies(double frequencyBinInterval, double[] magnitude, int peakFrequencyCount, double minFrequency = 0, double maxFrequency = double.MaxValue)
-        {
-            var (combinedFrequencyBins, combinedMagnitudes) = ComputeMagnitudeInFrequencyBinInterval(magnitude, _sampleRate, _numberOfSamples, frequencyBinInterval);
-            return FindCharacteristicFrequencies(combinedFrequencyBins, combinedMagnitudes, peakFrequencyCount, minFrequency, maxFrequency);
-        }
-
-        public (double[] frequencies, double[] magnitudes) FindCharacteristicFrequencies(double[] combinedFrequencyBins, double[] combinedMagnitudes, int peakFrequencyCount, double minFrequency = 0, double maxFrequency = double.MaxValue)
-        {
-            var frequencyMagnitudePairs = combinedFrequencyBins
-                .Select((freq, idx) => new { freq, magnitude = combinedMagnitudes[idx] })
-                .Where(pair => pair.freq != 0 && pair.freq >= minFrequency && pair.freq <= maxFrequency)
-                .OrderByDescending(pair => pair.magnitude)
-                .Take(peakFrequencyCount)
-                .ToArray();
-
-            return (frequencyMagnitudePairs.Select(pair => pair.freq).ToArray(),
-                    frequencyMagnitudePairs.Select(pair => pair.magnitude).ToArray());
         }
 
         private int ComputeBinWidth(double frequencyBinInterval)
